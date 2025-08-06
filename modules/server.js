@@ -116,9 +116,9 @@ async function sendTemplateMessage(to, templateName, headerType = null, headerUr
       ];
     }
 
-    // Special handling for know_more template with document
-    if (templateName === 'know_more' && headerType === 'DOCUMENT') {
-      console.log(`📄 Adding document header for know_more template: ${headerUrl}`);
+    // Special handling for about_us template with document
+    if (templateName === 'about_us' && headerType === 'DOCUMENT') {
+      console.log(`📄 Adding document header for about_us template: ${headerUrl}`);
     }
     
     // For welcome_onboard, include the image header
@@ -309,18 +309,18 @@ async function handleIncomingMessage(from, message) {
           context_data: { last_action: 'contacted_customer_care' }
         });
         
-      } else if (buttonText.includes('about') || buttonText.includes('program') || buttonText.includes('know more')) {
-        // Send know_more template with PDF header
+      } else if (buttonText.includes('about') || buttonText.includes('program') || buttonText.includes('know more') || buttonReplyId === 'about_us') {
+        // Send about_us template with PDF header
         await sendTemplateMessage(
           from,
-          'know_more',
+          'about_us',
           'DOCUMENT',
-          'https://drive.google.com/uc?export=view&id=1iMMoUvlhKUccxPt5XCWH9BWRzGnDSfQY'
+          'https://drive.google.com/uc?export=view&id=1cXvisg-KBusMyPZpUP6EnJn5ObTAY14Y'
         );
         
         // Update session
         updateUserSession(from, {
-          current_step: 'know_more_viewed',
+          current_step: 'about_us_viewed',
           context_data: { last_action: 'viewed_program_info' }
         });
         
@@ -366,7 +366,7 @@ async function handleIncomingMessage(from, message) {
           "Please select an option to proceed:",
           "We're here to help you better!",
           [
-            { id: "know_more", title: "About Program" },
+            { id: "about_us", title: "About Program" },
             { id: "contact_care", title: "Customer Care" },
             { id: "back_to_main", title: "Main Menu" }
           ]
@@ -378,21 +378,7 @@ async function handleIncomingMessage(from, message) {
           context_data: { last_action: 'more_options' }
         });
         
-      } else if (buttonReplyId === 'know_more') {
-        // Send know_more template with PDF
-        await sendTemplateMessage(
-          from,
-          'know_more',
-          'DOCUMENT',
-          'https://drive.google.com/uc?export=view&id=1iMMoUvlhKUccxPt5XCWH9BWRzGnDSfQY'
-        );
-        
-        // Update session
-        updateUserSession(from, {
-          current_step: 'know_more_viewed',
-          context_data: { last_action: 'viewed_program_info' }
-        });
-        
+
       } else if (buttonReplyId === 'contact_care') {
         await sendTextMessage(from, `📞 *Customer Care*\n\nFor any assistance, please contact our customer care team:\n\nPhone: ${process.env.CONTACT_CUSTOMER_CARE}\n\nWe're available 24/7 to help you with any questions or concerns you may have.\n\nYour health is our priority!`);
         
