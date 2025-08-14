@@ -16,14 +16,14 @@ const requiredEnvVars = [
   'API_VERSION',
   'REGISTER_FORM',
   'DOWNLOAD_HEALTHEDGE_APP',
-  'CONTACT_CUSTOMER_CARE'
+  'CONTACT_CUSTOMER_CARE',
+  'PROGRAM_INFO_PDF_URL' // Ensure this is also in your .env file
 ];
 
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 if (missingVars.length > 0) {
   console.error('❌ Missing required environment variables:', missingVars.join(', '));
-  // In a production environment, you might want to uncomment the line below to stop the server
-  // process.exit(1);
+  process.exit(1);
 }
 
 const {
@@ -33,26 +33,50 @@ const {
   API_VERSION,
   REGISTER_FORM,
   DOWNLOAD_HEALTHEDGE_APP,
-  CONTACT_CUSTOMER_CARE
+  CONTACT_CUSTOMER_CARE,
+  PROGRAM_INFO_PDF_URL
 } = process.env;
 
 const API_URL = `https://graph.facebook.com/${API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
 
 // Session management (in-memory)
 const userSessions = {};
+// 🕑 Session timeout constant (e.g., 30 minutes)
+const SESSION_TIMEOUT_MINUTES = 30;
 
 // Get or create user session
 const getUserSession = (phoneNumber) => {
-  if (!userSessions[phoneNumber]) {
+  const now = new Date();
+  let session = userSessions[phoneNumber];
+
+  // If a session exists, check if it's expired
+  if (session) {
+    const lastInteraction = new Date(session.last_interaction);
+    const timeElapsed = (now.getTime() - lastInteraction.getTime()) / 1000 / 60; // in minutes
+
+    if (timeElapsed > SESSION_TIMEOUT_MINUTES) {
+      console.log(`⏱️ Session for ${phoneNumber} has expired. Creating a new one.`);
+      delete userSessions[phoneNumber];
+      session = null;
+    }
+  }
+
+  // Create a new session if one doesn't exist or was expired
+  if (!session) {
     userSessions[phoneNumber] = {
       current_step: 'start',
       first_message_sent: false,
-      last_interaction: new Date().toISOString(),
+      last_interaction: now.toISOString(),
       context_data: {
         last_action_title: null
       }
     };
+    console.log(`✅ New session created for ${phoneNumber}.`);
+  } else {
+    // Update the last interaction time for an existing session
+    userSessions[phoneNumber].last_interaction = now.toISOString();
   }
+
   return userSessions[phoneNumber];
 };
 
@@ -291,7 +315,7 @@ async function handleAction(from, actionId) {
       
       case 'know_more':
         actionTitle = 'Know more about Program';
-        messageBody = `📄 *About Our Program*\n\nYou can view our program details by clicking the link below:\n${process.env.PROGRAM_INFO_PDF_URL}`;
+        messageBody = `📄 *About Our Program*\n\nYou can view our program details by clicking the link below:\n${PROGRAM_INFO_PDF_URL}`;
         updateUserSession(from, { context_data: { last_action_title: actionTitle } });
         await sendTextWithButton(from, messageBody, "Back to Main Menu", "back_to_main");
         break;
